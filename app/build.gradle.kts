@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "de.klarverwaltung.kv_ibuttonservice"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "de.klarverwaltung.kv_ibuttonservice"
@@ -50,8 +50,8 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.constraintlayout)
-    implementation(libs.usbserial)
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation (libs.usb.serial.for1.android.v3110)
 }

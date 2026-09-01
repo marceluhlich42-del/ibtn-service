@@ -7,6 +7,7 @@ appcompat = "1.6.1"
 material = "1.10.0"
 constraintlayout = "2.1.4"
 usbserial = "3.7.3"
+usbSerialForAndroid = "3.11.0"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -15,6 +16,7 @@ espresso-core = { group = "androidx.test.espresso", name = "espresso-core", vers
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+usb-serial-for1-android-v3110 = { module = "com.github.mik3y:usb-serial-for-android", version.ref = "usbSerialForAndroid" }
 usbserial = { group = "com.github.mik3y", name = "usb-serial-for-android", version.ref = "usbserial" }
 
 [plugins]
