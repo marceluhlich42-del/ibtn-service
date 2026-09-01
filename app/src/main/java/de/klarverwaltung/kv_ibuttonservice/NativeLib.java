@@ -79,7 +79,7 @@ class NativeLib {
         }
     }
 
-    private void logToFile(Context context, String message) {
+    public void logToFile(Context context, String message) {
         // Saves to: /storage/emulated/0/Android/data/<your.package.name>/files/app_log.txt
         File logDir = context.getExternalFilesDir(null);
         if (logDir == null) return;

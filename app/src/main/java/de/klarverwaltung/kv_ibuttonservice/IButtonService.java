@@ -8,8 +8,20 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.os.IBinder;
 
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
+import android.hardware.usb.UsbDeviceConnection;
+import android.content.Context;
+import com.hoho.android.usbserial.driver.UsbSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialProber;
+import com.hoho.android.usbserial.driver.ProbeTable;
+import com.hoho.android.usbserial.driver.Ch34xSerialDriver;
+import com.hoho.android.usbserial.driver.UsbSerialPort;
+
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+
+import java.util.HashMap;
 
 public class IButtonService extends Service {
 
@@ -23,6 +35,9 @@ public class IButtonService extends Service {
 
     private volatile boolean isRunning;
     private boolean isStarted = false;
+
+    private UsbSerialPort usbSerialPort = null;
+    private boolean useUsbFallback = false;
 
 
 
@@ -39,13 +54,79 @@ public class IButtonService extends Service {
         manager.createNotificationChannel(channel);
 
 
-        lib.openRchDallas(getApplicationContext());
+        boolean nativeSuccess = lib.openRchDallas(getApplicationContext());
+
+        if (!nativeSuccess) {
+            lib.logToFile(getApplicationContext(), "Native open failed. Attempting USB fallback.");
+            try {
+                UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+                if (usbManager != null) {
+                    HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
+                    UsbDevice targetDevice = null;
+                    for (UsbDevice device : deviceList.values()) {
+                        if (device.getVendorId() == 6790 && device.getProductId() == 21795) {
+                            targetDevice = device;
+                            break;
+                        }
+                    }
+
+                    if (targetDevice != null) {
+                        lib.logToFile(getApplicationContext(), "Found target USB device: " + targetDevice.getDeviceName());
+                        ProbeTable customTable = new ProbeTable();
+                        customTable.addProduct(6790, 21795, Ch34xSerialDriver.class); // Trying CH34x driver as fallback
+
+                        UsbSerialProber prober = new UsbSerialProber(customTable);
+                        UsbSerialDriver driver = prober.probeDevice(targetDevice);
+
+                        if (driver != null) {
+                            UsbDeviceConnection connection = usbManager.openDevice(driver.getDevice());
+                            if (connection != null) {
+                                usbSerialPort = driver.getPorts().get(0);
+                                usbSerialPort.open(connection);
+                                usbSerialPort.setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+                                useUsbFallback = true;
+                                lib.logToFile(getApplicationContext(), "USB port opened successfully.");
+                            } else {
+                                lib.logToFile(getApplicationContext(), "Failed to open USB device connection. Check permissions.");
+                            }
+                        } else {
+                            lib.logToFile(getApplicationContext(), "No suitable USB serial driver found for device.");
+                        }
+                    } else {
+                        lib.logToFile(getApplicationContext(), "Target USB device not found.");
+                    }
+                }
+            } catch (Exception e) {
+                lib.logToFile(getApplicationContext(), "USB Fallback exception: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
         isRunning = true;
         new Thread(() -> {
             int index = 0;
+            byte[] buffer = new byte[8192];
             while (isRunning) {
                 try {
-                    IbuttonResult result = lib.readDallas();
+                    IbuttonResult result = null;
+
+                    if (!useUsbFallback) {
+                        result = lib.readDallas();
+                    } else {
+                        if (usbSerialPort != null) {
+                            int len = usbSerialPort.read(buffer, 1000);
+                            if (len > 0) {
+                                StringBuilder sb = new StringBuilder();
+                                for (int i = 0; i < len; i++) {
+                                    sb.append(String.format("%02X", buffer[i]));
+                                }
+                                String hexData = sb.toString();
+                                lib.logToFile(getApplicationContext(), "USB READ: " + hexData);
+                                // For testing we just write to log, but we can also mock a result
+                                // result = new IbuttonResult(hexData, 0);
+                            }
+                        }
+                    }
 
                     if(result != null){
                         IButtonEvent.getInstance().postEvent(result);
@@ -93,7 +174,15 @@ public class IButtonService extends Service {
     public void onDestroy() {
         super.onDestroy();
         try {
-            lib.closeDevice();
+            if (useUsbFallback && usbSerialPort != null) {
+                try {
+                    usbSerialPort.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                lib.closeDevice();
+            }
         }
         finally {
             isRunning = false;
