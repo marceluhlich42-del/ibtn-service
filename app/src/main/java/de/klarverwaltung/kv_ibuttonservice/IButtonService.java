@@ -15,7 +15,6 @@ import android.content.Context;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 import com.hoho.android.usbserial.driver.ProbeTable;
-import com.hoho.android.usbserial.driver.Ch34xSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 
 import androidx.annotation.Nullable;
@@ -73,7 +72,7 @@ public class IButtonService extends Service {
                     if (targetDevice != null) {
                         lib.logToFile(getApplicationContext(), "Found target USB device: " + targetDevice.getDeviceName());
                         ProbeTable customTable = new ProbeTable();
-                        customTable.addProduct(6790, 21795, Ch34xSerialDriver.class); // Trying CH34x driver as fallback
+                        customTable.addProduct(6790, 21795, CustomCh34xSerialDriver.class); // Trying CH34x driver as fallback
 
                         UsbSerialProber prober = new UsbSerialProber(customTable);
                         UsbSerialDriver driver = prober.probeDevice(targetDevice);
