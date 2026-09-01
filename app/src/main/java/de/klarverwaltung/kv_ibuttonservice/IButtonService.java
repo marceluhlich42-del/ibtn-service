@@ -39,7 +39,7 @@ public class IButtonService extends Service {
         manager.createNotificationChannel(channel);
 
 
-        lib.openRchDallas();
+        lib.openRchDallas(getApplicationContext());
         isRunning = true;
         new Thread(() -> {
             int index = 0;
@@ -54,7 +54,7 @@ public class IButtonService extends Service {
 
                         intent.setComponent(new ComponentName(
                                 "de.klarverwaltung.taxoPos",               // Replace with the target app's package name
-                                "de.vaolo.taxoPos.BootBroadcastReceiver" // Replace with the full class name of the receiver
+                                "de.klarverwaltung.taxoPos.BootBroadcastReceiver" // Replace with the full class name of the receiver
                         ));
 
 
